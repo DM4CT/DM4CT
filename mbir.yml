@@ -1,0 +1,24 @@
+name: mbir
+channels:
+  - httomo
+  - conda-forge
+  - nvidia
+  - ccpi
+  - astra-toolbox
+  - defaults
+  - https://repo.anaconda.com/pkgs/main
+  - https://repo.anaconda.com/pkgs/r
+dependencies:
+  - astra-toolbox=2.3.0
+  - ccpi-regulariser=24.0.1
+  - cuda-cudart=12.8.90
+  - cuda-cudart_linux-64=12.8.90
+  - cuda-version=12.8
+  - numpy=1.26.4
+  - pip=25.0
+  - pluggy=1.5.0
+  - pytest=8.3.4
+  - python=3.12.2
+  - tomobar=2024.12
+  - pip:
+      - tqdm==4.67.1
