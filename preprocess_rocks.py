@@ -39,9 +39,7 @@ save_dir_test = f"{save_dir}/test"
 os.makedirs(save_dir_train, exist_ok=True)
 os.makedirs(save_dir_test, exist_ok=True)
 
-save_dir_train_sinos = f"{save_dir}/train_sinos"
 save_dir_test_sinos = f"{save_dir}/test_sinos"
-os.makedirs(save_dir_train_sinos, exist_ok=True)
 os.makedirs(save_dir_test_sinos, exist_ok=True)
 
 slice_start = 5
@@ -107,9 +105,40 @@ for i in tqdm(range(recon.shape[0])):
 # save the reconstructions (ring corrected) and the sinograms (scaled pre ring correction)
 for i in tqdm(range(recon.shape[0])):
     imwrite(f"{save_dir_test}/{str(i).zfill(3)}.tif", recon[i].astype(np.float32))
-    imwrite(f"{save_dir_test_sinos}/{str(i).zfill(3)}.tif", projs[i].astype(np.float32))
 
 test_p05, test_p95 = np.percentile(recon, [5, 95])
+
+############################test sinogram###########################
+# test sinogram only use the first flat/dark field instead of the median
+dark_first = darks[0]
+white_first = flats[0]
+
+# reload original projections
+projs = np.zeros((1200, slice_end-slice_start, 1231-463), dtype=np.float32)
+for i in range(1,1201):
+    projs[i-1] = imread(f"{dataset_dir}/{target}/tomo_{str(i).zfill(4)}.tif")[slice_start:slice_end,463:1231]
+
+projs = (projs - dark_first) / (white_first - dark_first)
+projs[projs<=0] = projs[projs>0].min()
+projs = -np.log(projs)
+
+num_angles = projs.shape[0]
+
+projs = np.swapaxes(projs,0,1)
+
+for i in tqdm(range(recon.shape[0])):
+    proj = torch.tensor(projs[i], dtype=torch.float32, device='cuda')
+    proj = proj.unsqueeze(0)
+    recon_fbp = fbp(A, proj)
+    recon[i] = recon_fbp.detach().squeeze().cpu().numpy()
+
+recon_max, recon_min = recon.max(), recon.min()
+scale_factor = 2 / (recon_max - recon_min)
+projs *= scale_factor  # Apply scaling to projections
+projs *= 1.5
+
+for i in tqdm(range(projs.shape[0])):
+    imwrite(f"{save_dir_test_sinos}/{str(i).zfill(3)}.tif", projs[i].astype(np.float32))
 
 ############################train rock###############################
 target = 'F3_1_mono'
@@ -161,5 +190,4 @@ recon = recon * (test_p95 - test_p05) + test_p05
 # save the reconstructions (ring corrected) and the sinograms (scaled pre ring correction)
 for i in tqdm(range(recon.shape[0])):
     imwrite(f"{save_dir_train}/{str(i).zfill(3)}.tif", recon[i].astype(np.float32))
-    imwrite(f"{save_dir_train_sinos}/{str(i).zfill(3)}.tif", projs[i].astype(np.float32))
 
