@@ -1714,3 +1714,169 @@ class LDMPipelineDiffStateGrad(LDMPipelineReSample):
 
 
         return z_init, init_loss       
+
+class DDPMPipelineDDS(DDPMPipeline):
+    def __init__(
+        self,
+        unet: UNet2DModel,
+        scheduler: DDIMScheduler,
+    ):
+        super().__init__(unet=unet, scheduler=scheduler)
+
+    @classmethod
+    def from_pretrained(cls, pretrained_model_name_or_path, **kwargs):
+        # Load components using the base class method
+        pipeline = super().from_pretrained(pretrained_model_name_or_path, **kwargs)
+
+        # Replace the scheduler with DDIMScheduler
+        ddim_scheduler = DDIMScheduler.from_config(pipeline.scheduler.config)
+        
+        # Return an instance of the subclass
+        return cls(unet=pipeline.unet, scheduler=ddim_scheduler)
+
+
+    # @torch.no_grad()
+    def __call__(
+        self,
+        batch_size: int = 1,
+        generator: Optional[Union[torch.Generator, List[torch.Generator]]] = None,
+        num_inference_steps: int = 100,
+        output_type: Optional[str] = "pil",
+        measurement = None,
+        return_dict: bool = True,
+        eta = 0.85,
+        cg_inner=5,
+        cg_eps=1e-5,
+        gamma=0
+    ):
+        r"""
+        The call function to the pipeline for generation.
+
+        Args:
+            batch_size (`int`, *optional*, defaults to 1):
+                The number of images to generate.
+            generator (`torch.Generator`, *optional*):
+                A [`torch.Generator`](https://pytorch.org/docs/stable/generated/torch.Generator.html) to make
+                generation deterministic.
+            num_inference_steps (`int`, *optional*, defaults to 1000):
+                The number of denoising steps. More denoising steps usually lead to a higher quality image at the
+                expense of slower inference.
+            output_type (`str`, *optional*, defaults to `"pil"`):
+                The output format of the generated image. Choose between `PIL.Image` or `np.array`.
+            return_dict (`bool`, *optional*, defaults to `True`):
+                Whether or not to return a [`~pipelines.ImagePipelineOutput`] instead of a plain tuple.
+
+        Example:
+
+        ```py
+        >>> from diffusers import DDPMPipeline
+
+        >>> # load model and scheduler
+        >>> pipe = DDPMPipeline.from_pretrained("google/ddpm-cat-256")
+
+        >>> # run pipeline in inference (sample random noise and denoise)
+        >>> image = pipe().images[0]
+
+        >>> # save image
+        >>> image.save("ddpm_generated_image.png")
+        ```
+
+        Returns:
+            [`~pipelines.ImagePipelineOutput`] or `tuple`:
+                If `return_dict` is `True`, [`~pipelines.ImagePipelineOutput`] is returned, otherwise a `tuple` is
+                returned where the first element is a list with the generated images
+        """
+        if self.measurement_condition is None:
+            raise ValueError("Measurement condition is not set.")
+
+        # Sample gaussian noise to begin loop
+        if isinstance(self.unet.config.sample_size, int):
+            image_shape = (
+                batch_size,
+                self.unet.config.in_channels,
+                self.unet.config.sample_size,
+                self.unet.config.sample_size,
+            )
+        else:
+            image_shape = (batch_size, self.unet.config.in_channels, *self.unet.config.sample_size)
+
+        if self.device.type == "mps":
+            # randn does not work reproducibly on mps
+            image = randn_tensor(image_shape, generator=generator, dtype=self.unet.dtype)
+            image = image.to(self.device)
+        else:
+            image = randn_tensor(image_shape, generator=generator, device=self.device, dtype=self.unet.dtype)
+
+        if image.ndim==4 and measurement.ndim==3:
+            measurement = measurement.unsqueeze(0)
+
+        # set step values
+        self.scheduler.set_timesteps(num_inference_steps)
+
+        bcg = self.measurement_condition.operator.transpose(measurement)
+
+        for t in self.progress_bar(self.scheduler.timesteps):
+            with torch.no_grad():
+                # 1. predict noise model_output
+                model_output = self.unet(image, t).sample
+
+            # 2. compute previous image: x_t -> x_t-1
+            out = self.scheduler.step(model_output, t, image, generator=generator)
+
+            # conjugate gradient steps
+            x0_pred_original_sample = out.pred_original_sample
+            if gamma > 0:
+                bcg = x0_pred_original_sample + gamma * self.measurement_condition.operator.transpose(measurement)
+            r = bcg - self.measurement_condition.operator.transpose(self.measurement_condition.operator(x0_pred_original_sample)) - gamma * x0_pred_original_sample
+            p = r.clone()
+            rsold = torch.matmul(r.view(1, -1), r.view(1, -1).T)
+
+            for i in range(cg_inner):
+                Ap = self.measurement_condition.operator.transpose(self.measurement_condition.operator(p)) + gamma * p
+                a = rsold / torch.matmul(p.view(1, -1), Ap.view(1, -1).T)
+
+                x0_pred_original_sample = x0_pred_original_sample + a * p
+                r = r - a * Ap
+
+                rsnew = torch.matmul(r.view(1, -1), r.view(1, -1).T)
+                if torch.sqrt(rsnew) < cg_eps:
+                    break
+                p = r + (rsnew / rsold) * p
+                rsold = rsnew
+            
+            prev_timestep =  t - self.scheduler.config.num_train_timesteps // self.scheduler.num_inference_steps
+
+            alpha_prod_t = self.scheduler.alphas_cumprod[t]
+            alpha_prod_t_prev = self.scheduler.alphas_cumprod[prev_timestep] if prev_timestep >= 0 else self.scheduler.final_alpha_cumprod
+
+            variance = self.scheduler._get_variance(t, prev_timestep)
+            std_dev_t = eta * variance ** (0.5)
+
+            # 6. compute "direction pointing to x_t" of formula (12) from https://arxiv.org/pdf/2010.02502.pdf
+            pred_sample_direction = (1 - alpha_prod_t_prev - std_dev_t**2) ** (0.5) * model_output
+
+            # 7. compute x_t without "random noise" of formula (12) from https://arxiv.org/pdf/2010.02502.pdf 
+            # conjugate graident updated x0_pred_original_sample used here
+            prev_sample = alpha_prod_t_prev ** (0.5) * x0_pred_original_sample + pred_sample_direction
+
+            if eta > 0:
+                variance_noise = randn_tensor(
+                    model_output.shape, generator=generator, device=model_output.device, dtype=model_output.dtype
+                )
+                variance = std_dev_t * variance_noise
+
+                prev_sample = prev_sample + variance
+            
+            image = prev_sample
+
+        image = image.cpu().numpy()
+
+        if output_type == "pil":
+            image = (image / 2 + 0.5).clamp(0, 1)
+            image = image.cpu().permute(0, 2, 3, 1).numpy()            
+            image = self.numpy_to_pil(image)
+
+        if not return_dict:
+            return (image,)
+
+        return ImagePipelineOutput(images=image)

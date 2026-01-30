@@ -105,3 +105,8 @@ class DiffStateGrad(ConditioningMethod):
     def __init__(self, operator, noiser, **kwargs):
         super().__init__(operator, noiser)
         self.scale = kwargs.get('scale', 1.0)
+
+class DDS(ConditioningMethod):
+    def __init__(self, operator, noiser, **kwargs):
+        super().__init__(operator, noiser)
+        self.scale = kwargs.get('scale', 1.0)
