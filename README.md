@@ -1,11 +1,12 @@
-![](figures/dm4ct_icon2.png)
+<img src="figures/dm4ct_icon2.png" style="width:100%;" />
 
 [**DM4CT: Benchmarking Diffusion Models for Computed Tomography Reconstruction**](https://openreview.net/forum?id=YE5scJekg5) (ICLR 2026)
 
 Jiayang Shi, Daniel M. Pelt, K. Joost Batenburg
 
 Abstract: Diffusion models have recently emerged as powerful priors for solving inverse problems. While computed tomography (CT) is theoretically a linear inverse problem, it poses many practical challenges. These include correlated noise, artifact structures, reliance on system geometry, and misaligned value ranges, which make the direct application of diffusion models more difficult than in domains like natural image generation. To systematically evaluate how diffusion models perform in this context and compare them with established reconstruction methods, we introduce DM4CT, \textit{a comprehensive benchmark for CT reconstruction}. DM4CT includes datasets from both medical and industrial domains with sparse-view and noisy configurations. To explore the challenges of deploying diffusion models in practice, we additionally acquire a high-resolution CT dataset at a high-energy synchrotron facility and evaluate all methods under real experimental conditions. We benchmark ten recent diffusion-based methods alongside seven strong baselines, including model-based, unsupervised, and supervised approaches. Our analysis provides detailed insights into the behavior, strengths, and limitations of diffusion models for CT reconstruction. The real-world dataset is publicly available at [https://zenodo.org/records/15420527](zenodo.org/records/15420527), and the codebase is open-sourced at [https://github.com/DM4CT/DM4CT](github.com/DM4CT/DM4CT).
-![](figures/dm4ct_overview.png)
+
+<img src="figures/dm4ct_overview.png" style="width:100%;" />
 
 ## Table of Contents
 - [Table of Contents](#table-of-contents)
