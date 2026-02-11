@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="description"
+        content="DM4CT: Benchmarking Diffusion Models for Computed Tomography Reconstruction">
+  <meta name="keywords" content="Computed Tomography, Benchmark, Diffusion model">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DM4CT: Benchmarking Diffusion Models for Computed Tomography Reconstruction</title>
+
+  <link href="https://fonts.googleapis.com/css?family=Google+Sans|Noto+Sans|Castoro"
+        rel="stylesheet">
+
+  <link rel="stylesheet" href="./static/css/bulma.min.css">
+  <link rel="stylesheet" href="./static/css/bulma-carousel.min.css">
+  <link rel="stylesheet" href="./static/css/bulma-slider.min.css">
+  <link rel="stylesheet" href="./static/css/fontawesome.all.min.css">
+  <link rel="stylesheet"
+        href="https://cdn.jsdelivr.net/gh/jpswalsh/academicons@1/css/academicons.min.css">
+  <link rel="stylesheet" href="./static/css/index.css">
+
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+  <script defer src="./static/js/fontawesome.all.min.js"></script>
+  <script src="./static/js/bulma-carousel.min.js"></script>
+  <script src="./static/js/bulma-slider.min.js"></script>
+  <script src="./static/js/index.js"></script>
+  <script type="text/javascript" async
+  src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+  <script type="text/javascript" async
+    src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+  <style>
+      table {
+          width: 100%;
+          border-collapse: collapse;
+          margin: 20px auto;
+          vertical-align: middle;
+      }
+      th, td {
+          border: 1px solid black;
+          padding: 8px;
+          text-align: center;
+          vertical-align: middle;
+      }
+      th {
+          background-color: #f2f2f2;
+      }
+      .checkmark {
+          color: green;
+          font-weight: bold;
+      }
+      .crossmark {
+          color: red;
+          font-weight: bold;
+      }
+  </style>
+
+  </head>
+
+<body>
+
+<section class="hero banner">
+  <div class="hero-body">
+    <div class="container is-max-desktop">
+      <div class="columns is-centered">
+        <div class="column has-text-centered">
+          <h1 class="title is-2 publication-title"><span style="font-variant: small-caps;">DM4CT</span>: Benchmarking Diffusion Models for Computed Tomography Reconstruction</h1>
+          <div class="is-size-5 publication-authors">
+            <span class="author-block">
+              <a href="https://jiayangshi.github.io">Jiayang Shi</a><sup>1,2</sup>,
+            </span>
+            <span class="author-block">
+              <a href="https://dmpelt.github.io">Daan Pelt</a><sup>1</sup>,
+            </span>
+            <span class="author-block">
+              <a href="https://www.universiteitleiden.nl/medewerkers/joost-batenburg">Joost Batenburg</a><sup>1</sup>,
+            </span>
+          </div>
+
+          <div class="is-size-5 publication-authors">
+            <span class="author-block"><sup>1</sup>LIACS, Leiden University</span> &nbsp;&nbsp;&nbsp;&nbsp;
+            <span class="author-block"><sup>2</sup>Centrum Wiskunde en Informatica</span> &nbsp;&nbsp;&nbsp;&nbsp;
+          </div>
+
+          <div>
+            <h1 style="font-size: 1.5rem;">ICLR 2026 </h1>
+          <div>
+
+          <div class="column has-text-centered">
+            <div class="publication-links">
+              <!-- PDF Link. -->
+              <span class="link-block">
+                <a href="https://openreview.net/forum?id=YE5scJekg5&noteId=oYqxdLMM1B"
+                   class="external-link button is-normal is-rounded is-dark">
+                  <span class="icon">
+                      <i class="fas fa-file-pdf"></i>
+                  </span>
+                  <span>Paper</span>
+                </a>
+              </span>
+              <span class="link-block">
+                <a href="https://zenodo.org/records/15420527"
+                   class="external-link button is-normal is-rounded is-dark">
+                  <span class="icon">
+                      <i class="fas fa-database"></i>
+                  </span>
+                  <span>Dataset</span>
+                </a>
+              </span>
+              <span class="link-block">
+                <a href="https://github.com/DM4CT/DM4CT"
+                   class="external-link button is-normal is-rounded is-dark">
+                  <span class="icon">
+                      <i class="fab fa-github"></i>
+                  </span>
+                  <span>Code</span>
+                  </a>
+              </span>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="hero teaser">
+  <div class="hero-body">
+    <div class="container has-text-centered">
+      <img src="./static/images/benchmark_overview.pdf"
+        class="interpolation-image"
+        alt="Interpolate start reference image."
+        width="70%"/>
+      
+        <div class="content has-text-justified">
+          <p style="margin-left: 15%; margin-right: 15%;">
+            Overview of the DM4CT benchmark. (a) The reconstruction pipeline, 
+            where representative diffusion and baseline methods are applied to measured 
+            sinograms using the same forward model. (b) The datasets used in the benchmark, 
+            including two simulated CT datasets (medical and industrial) and one real-world 
+            dataset acquired at a synchrotron facility. (c) The five simulation configurations 
+            used to evaluate robustness to limited views, noise, and ring artifacts. Two 
+            example FBP reconstructions under noise and ring artifact conditions are shown. 
+            (d) The evaluation metrics, including both qualitative (visual) and quantitative 
+            (image quality and computational efficiency) criteria.
+          </p>
+        </div>
+    </div>
+  </div>
+</section>
+
+
+
+<section class="section">
+  <div class="container is-max-desktop">
+    <!-- Abstract. -->
+    <div class="columns is-centered has-text-centered">
+      <div class="column is-four-fifths">
+        <h2 class="title is-3">Abstract</h2>
+        <div class="content has-text-justified">
+          Diffusion models have recently emerged as powerful priors for solving inverse problems. While computed 
+          tomography (CT) is theoretically a linear inverse problem, it poses many practical challenges. These 
+          include correlated noise, artifact structures, reliance on system geometry, and misaligned value 
+          ranges, which make the direct application of diffusion models more difficult than in domains like 
+          natural image generation. To systematically evaluate how diffusion models perform in this context 
+          and compare them with established reconstruction methods, we introduce DM4CT, 
+          a comprehensive benchmark for CT reconstruction. DM4CT includes datasets from 
+          both medical and industrial domains with sparse-view and noisy configurations. To explore the challenges of 
+          deploying diffusion models in practice, we additionally acquire a high-resolution CT dataset at a 
+          high-energy synchrotron facility and evaluate all methods under real experimental conditions. We benchmark 
+          ten recent diffusion-based methods alongside seven strong baselines, including model-based, unsupervised, 
+          and supervised approaches. Our analysis provides detailed insights into the behavior, strengths, and 
+          limitations of diffusion models for CT reconstruction. The real-world dataset is publicly available 
+          at <a href="https://zenodo.org/records/15420527">zenodo.org/records/15420527</a>, and the codebase is 
+          open-sourced at <a href="https://github.com/DM4CT/DM4CT">github.com/DM4CT/DM4CT</a>.
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container is-max-desktop">
+    <!-- Method. -->
+    <div class="columns is-centered has-text-centered">
+      <div class="column is-four-fifths">
+        <h2 class="title is-3">Methods </h2>
+
+        <div class="content has-text-justified">
+          <p>
+            Diffusion-based methods evaluated in <span style="font-variant: small-caps;">DM4CT</span>. Columns under Technique 
+            refer to implementation choices (e.g., latent-space diffusion or DDIM-based sampling). 
+            Columns under Reconstruction Strategy denote how measurement conditioning is 
+            incorporated, including data consistency gradient steering (DC-grad), separate 
+            optimization steps (DC-step), plug-and-play priors, and use of approximate pseudoinverse 
+            solutions. A <td class="checkmark">&#10003;<sup>*</sup></td> indicates only a single-step update toward the pseudoinverse. 
+            A <td class="checkmark">&#10003;<sup>‡</sup></td> indicates methods that incorporate data fidelity via a 
+            conjugate-gradient solve rather than a direct pixel-space optimization step.
+          </p>
+        </div>
+
+        <table>
+          <thead>
+              <tr>
+                  <th>Method</th>
+                  <th>Year</th>
+                  <th>Latent</th>
+                  <th>DDIM</th>
+                  <th>DC-grad</th>
+                  <th>DC-step</th>
+                  <th>Plug-and-Play</th>
+                  <th>Pseudo Inv</th>
+                  <th>Variational Bayes</th>
+              </tr>
+          </thead>
+          <tbody>
+
+              <tr>
+                  <td>MCG</td>
+                  <td>2022</td>
+                  <td class="crossmark">&#10007;</td>
+                  <td class="crossmark">&#10007;</td>
+                  <td class="crossmark">&#10007;</td>
+                  <td class="crossmark">&#10007;</td>
+                  <td class="crossmark">&#10007;</td>
+                  <td class="checkmark">&#10003;<sup>*</sup></td>
+                  <td class="crossmark">&#10007;</td>
+              </tr>
+
+              <tr>
+                  <td>DPS</td>
+                  <td>2023</td>
+                  <td class="crossmark">&#10007;</td>
+                  <td class="crossmark">&#10007;</td>
+                  <td class="checkmark">&#10003;</td>
+                  <td class="crossmark">&#10007;</td>
+                  <td class="crossmark">&#10007;</td>
+                  <td class="crossmark">&#10007;</td>
+                  <td class="crossmark">&#10007;</td>
+              </tr>
+
+              <tr>
+                  <td>PSLD</td>
+                  <td>2023</td>
+                  <td class="checkmark">&#10003;</td>
+                  <td class="crossmark">&#10007;</td>
+                  <td class="checkmark">&#10003;</td>
+                  <td class="crossmark">&#10007;</td>
+                  <td class="crossmark">&#10007;</td>
+                  <td class="crossmark">&#10007;</td>
+                  <td class="crossmark">&#10007;</td>
+              </tr>
+
+              <tr>
+                  <td>PGDM</td>
+                  <td>2023</td>
+                  <td class="crossmark">&#10007;</td>
+                  <td class="crossmark">&#10007;</td>
+                  <td class="crossmark">&#10007;</td>
+                  <td class="crossmark">&#10007;</td>
+                  <td class="crossmark">&#10007;</td>
+                  <td class="checkmark">&#10003;</td>
+                  <td class="crossmark">&#10007;</td>
+              </tr>
+
+              <tr>
+                  <td>DDS</td>
+                  <td>2024</td>
+                  <td class="crossmark">&#10007;</td>
+                  <td class="checkmark">&#10003;</td>
+                  <td class="crossmark">&#10007;</td>
+                  <td class="checkmark">&#10003;<sup>‡</sup></td>
+                  <td class="crossmark">&#10007;</td>
+                  <td class="crossmark">&#10007;</td>
+                  <td class="crossmark">&#10007;</td>
+              </tr>
+
+              <tr>
+                  <td>Resample</td>
+                  <td>2024</td>
+                  <td class="checkmark">&#10003;</td>
+                  <td class="checkmark">&#10003;</td>
+                  <td class="checkmark">&#10003;</td>
+                  <td class="checkmark">&#10003;</td>
+                  <td class="crossmark">&#10007;</td>
+                  <td class="crossmark">&#10007;</td>
+                  <td class="crossmark">&#10007;</td>
+              </tr>
+
+              <tr>
+                  <td>DMPlug</td>
+                  <td>2024</td>
+                  <td class="crossmark">&#10007;</td>
+                  <td class="checkmark">&#10003;</td>
+                  <td class="crossmark">&#10007;</td>
+                  <td class="checkmark">&#10003;</td>
+                  <td class="checkmark">&#10003;</td>
+                  <td class="crossmark">&#10007;</td>
+                  <td class="crossmark">&#10007;</td>
+              </tr>
+
+              <tr>
+                  <td>Reddiff</td>
+                  <td>2024</td>
+                  <td class="crossmark">&#10007;</td>
+                  <td class="checkmark">&#10003;</td>
+                  <td class="checkmark">&#10003;</td>
+                  <td class="crossmark">&#10007;</td>
+                  <td class="crossmark">&#10007;</td>
+                  <td class="checkmark">&#10003;</td>
+                  <td class="checkmark">&#10003;</td>
+              </tr>
+
+              <tr>
+                  <td>HybridReg</td>
+                  <td>2025</td>
+                  <td class="crossmark">&#10007;</td>
+                  <td class="checkmark">&#10003;</td>
+                  <td class="checkmark">&#10003;</td>
+                  <td class="crossmark">&#10007;</td>
+                  <td class="crossmark">&#10007;</td>
+                  <td class="checkmark">&#10003;</td>
+                  <td class="checkmark">&#10003;</td>
+              </tr>
+
+              <tr>
+                  <td>DiffStateGrad</td>
+                  <td>2025</td>
+                  <td class="checkmark">&#10003;</td>
+                  <td class="checkmark">&#10003;</td>
+                  <td class="checkmark">&#10003;</td>
+                  <td class="checkmark">&#10003;</td>
+                  <td class="crossmark">&#10007;</td>
+                  <td class="crossmark">&#10007;</td>
+                  <td class="crossmark">&#10007;</td>
+              </tr>
+
+          </tbody>
+      </table>
+ 
+    </div>
+    </div>
+  </div>
+</section>
+
+
+<section class="section">
+  <div class="container is-max-desktop">
+
+    <!-- Method. -->
+    <div class="columns is-centered">
+      <div class="column is-full-width">
+        <h2 class="title is-3 has-text-centered">Main Visualization</h2>
+        
+        <div class="content has-text-centered">
+            <img src="./static/images/benchmark_result_all.pdf" width="100%">
+        </div>
+        <div class="content has-text-justified">
+          <p>
+            Reconstruction results of diffusion-based and other established methods. 
+            Top: medical dataset (config iv, 80 angles with noise & ring artifacts); 
+            middle: industrial dataset (config ii, 20 angles with mild noise); 
+            bottom: real-world synchrotron dataset (60 angles). Red and green boxes 
+            show zoom-in regions. PSNR and SSIM appear in the top-left and top-right of each image. 
+            A dash (–) indicates that the method exceeded the 40 GB GPU memory limit 
+            for single-slice reconstruction and is therefore not executed. Images are 
+            consistently linear rescaled across methods to improve contrast.
+          </p>
+          <br>
+        </div>
+        <br/>
+      </div>
+    </div>
+    <!--/ Method. -->
+
+
+    <!-- Other Interesting Results. -->
+    <div class="columns is-centered">
+      <div class="column is-full-width">
+        <h2 class="title is-3 has-text-centered">Some Interesting Results</h2>
+
+          <h3 class="title is-4">Tradeoff between Prior and Data Consistency & Reconstruction Uncertainty</h3>
+          <div class="content has-text-justified">
+            <div class="content has-text-centered">
+              <figure style="display: flex; flex-direction: column; align-items: center;">
+                  <div style="display: flex; justify-content: center; gap: 20px;">
+                      <div style="text-align: center;">
+                          <img src="./static/images/benchmark_prior_data_consistency_w_a.pdf" width="100%">
+                          <!-- <figcaption>(a)</figcaption> -->
+                      </div>
+                      <div style="text-align: center;">
+                          <img src="./static/images/benchmark_uncertainty_stddev_bw.pdf" width="80%">
+                          <!-- <figcaption>(b)</figcaption> -->
+                      </div>
+                  </div>
+              </figure>
+            </div>
+            <p>
+              (a) Impact of data consistency step size &eta; on PSNR and data fit in DPS. 
+              Moderate values improve both, while large &eta; disrupts denoising and 
+              causes collapse. Visual examples in the plot highlight the transition from 
+              prior-dominated to noise-dominated reconstructions. (b) Mean and standard deviation of 
+              ten MCG reconstructions conditioned on the same real measurement. Note that the real 
+              measurement used in (b) is different from the one used for (a). 
+            </p>
+          </div>
+
+          <h3 class="title is-4">Prior Contribution and Consistency: A Null Space Perspective</h3>
+           <div class="content has-text-justified">
+            <div class="content has-text-centered">
+              <img src="./static/images/benchmark_data_consistency_strategy.pdf" width="100%">
+            </div>
+            <p>
+              Decomposition of reconstructions into range and null space components for different data consistency 
+              strategies with config i). For each method, the full reconstruction is shown on the left, with zoomed-in 
+              red insets of the range component in the center and the corresponding null component on the right. 
+              The top-left of each null component indicates its relative L2 energy as a percentage of the total 
+              reconstruction, reflecting the extent of content introduced by the prior. Zoom in for details.
+            </p>
+           </div>
+
+          <h3 class="title is-4">Data Consistency for Latent Diffusion: Gradient or Optimization?</h3>
+           <div class="content has-text-justified">
+            <div class="content has-text-centered">
+              <img src="./static/images/benchmark_latent_diffusion_data_consistency.pdf" width="100%">
+            </div>
+            <p>
+              Reconstruction results of latent diffusion methods using only data consistency gradients 
+              (PSLD) versus additional optimization steps (ReSample) under noise-free (40 projections, 
+              no noise) and noisy (80 projections) scenarios. ADMM-PDTV serves as a classical model-based 
+              baseline that applies data consistency optimization with heuristic prior. Red insets show 
+              magnified regions.
+            </p>
+           </div>
+
+          <h3 class="title is-4">Computation Efficiency</h3>
+           <div class="content has-text-justified">
+            <div class="content has-text-centered">
+              <figure style="display: flex; flex-direction: column; align-items: center;">
+                  <div style="display: flex; justify-content: center; gap: 20px; width: 100%;">
+                      <div style="text-align: center; flex: 1;">
+                          <img src="./static/images/benchmark_inference_efficiency_w_a.pdf" width="100%">
+                      </div>
+                      <div style="text-align: center; flex: 1;">
+                          <img src="./static/images/benchmark_train_efficiency_w_b.pdf" width="70%">
+                      </div>
+                  </div>
+              </figure>
+            </div>
+            <p>
+              (a) Reconstruction time and GPU memory. The time is counted on medical dataset. 
+              (b) Training time and GPU memory of pixel diffusion, latent diffusion and SwinIR.
+            </p>
+
+
+          <h3 class="title is-4">Fine Tuning Existing Natural Image Encoders (SDXL)</h3>
+           <div class="content has-text-justified">
+            <div class="content has-text-centered">
+              <img src="./static/images/benchmark_finetuning.png" width="50%">
+            </div>
+            <p>
+              Comparison of autoencoder reconstruction, unconditional diffusion generation, 
+              and CT reconstruction across different autoencoders. The VQ-VAE used in our 
+              benchmark produces consistently superior representations and reconstructions, 
+              while SDXL AutoencoderKL variants exhibit reduced stability and quality.
+            </p>
+           </div>
+
+          <h3 class="title is-4">Comparison between Training Stages on Reconstruction Performance</h3>
+           <div class="content has-text-justified">
+            <div class="content has-text-centered">
+              <img src="./static/images/benchmark_stages.png" width="60%">
+            </div>
+            <p>
+              Visualization of unconditional genration and CT reconstruction using 
+              different stages of the trained diffusion models. The early-stage model 
+              produces noisy unconditional generations, while
+              it yields the sharpest structures and the best fine-detail recovery for CT reconstruction.
+            </p>
+           </div>
+          
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="Acknowledgments">
+  <div class="container is-max-desktop content">
+    <h2 class="title has-text-centered">Acknowledgments</h2>
+    <p>The authors acknowledge financial support by the European Union H2020-MSCA-ITN-2020 
+      under grant agreement no. 956172 (xCTing). JS is also supported by grant from Dutch 
+      Research Council under grant no. ENWSS.2018.003 (UTOPIA) and no. NWA.1160.18.316 (CORTEX). 
+      The computation in this work is supported by SURF Snellius HPC infrastructure under grant 
+      no. EINF-15060. Synchrotron data acquisition was financially supported by the Dutch Research 
+      Council, project no. 016.Veni.192.23.
+  </div>
+</section>
+
+<section class="section" id="BibTeX">
+  <div class="container is-max-desktop content">
+    <h2 class="title has-text-centered">BibTeX</h2>
+    <pre>@inproceedings{
+shi2026dmct,
+title={{DM}4{CT}: Benchmarking Diffusion Models for Computed Tomography Reconstruction},
+author={Shi, Jiayang and Pelt, Dani{\"e}l M and Batenburg, K Joost},
+booktitle={The Fourteenth International Conference on Learning Representations},
+year={2026},
+url={https://openreview.net/forum?id=YE5scJekg5}
+}</pre>
+  </div>
+</section>
+
+
+<footer class="footer">
+  <div class="container">
+    <div class="columns is-centered">
+      <div class="column is-8">
+        <div class="content">
+          <p>
+            This website is adapted from <a href="https://github.com/devzhk/InverseBench/tree/site">InverseBench</a>.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>
