@@ -85,7 +85,7 @@ pipeline.measurement_condition = DDS(operator=A, noiser=noiser)
 y_n = noiser(A(img))
 
 # CT reconstruction conditioned on measurement
-imwrite("dps_L506_000.tif", pipeline(num_inference_steps=100, measurement=y_n, cg_inner=5, cg_eps=1e-5, gamma=1, output_type=np.array).images[0])
+imwrite("dds_L506_000.tif", pipeline(num_inference_steps=100, measurement=y_n, cg_inner=5, cg_eps=1e-5, gamma=1, output_type=np.array).images[0])
 
 ```
 
