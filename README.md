@@ -54,7 +54,7 @@ pipeline(batch_size=1).images[0].save("reconstructed_slice.png")
 ```
 
 ### CT Reconstruction Conditioned on Measurement
-We provide an example testing CT image [L506_000.tif](lodochallenge/L506_000.tif) and show the steps for CT reconstruction with with **18 lines of code** (DDS as example).
+We provide an example testing CT image [L506_000.tif](lodochallenge/L506_000.tif) and show the steps for CT reconstruction with **18 lines of code** (DDS as example).
 ```python
 import astra
 import torch
