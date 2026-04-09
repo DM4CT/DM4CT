@@ -11,6 +11,9 @@ Abstract: Diffusion models have recently emerged as powerful priors for solving 
 ## Table of Contents
 - [Table of Contents](#table-of-contents)
 - [Environment requirements](#environment-requirements)
+- [🔥 Simple Usage Examples](#-simple-usage-examples)
+  - [Unconditional Generation](#unconditional-generation)
+  - [CT Reconstruction Conditioned on Measurement](#ct-reconstruction-conditioned-on-measurement)
 - [Datasets](#datasets)
 - [Preprocessing](#preprocessing)
 - [Pretrained diffusion models](#pretrained-diffusion-models)
@@ -20,7 +23,7 @@ Abstract: Diffusion models have recently emerged as powerful priors for solving 
 
 ## Environment requirements
 - At least one Nvidia GPU for inference.
-- Main dependencies are `pytorch, diffuers, astra-toolbox, tifffile`.
+- Main dependencies are `pytorch, diffusers, astra-toolbox, tifffile`.
 
 We provide the conda [configuration](environment.yml) to create the same environment for the benchmark.
 
@@ -35,6 +38,55 @@ For MBIR reconstruction (due to version conflicts), use the separate environment
 ```bash
 conda env create -f mbir.yml
 conda activate mbir
+```
+
+## 🔥 Simple Usage Examples 
+### Unconditional Generation
+All pretrained diffusion models are now also hosted on [HuggingFace](https://huggingface.co/jiayangshi/models), which allows easy and straight-forward use. Simple try with only **3 lines of code**.
+```python
+from diffusers import DiffusionPipeline
+
+# pick your target pretrained model, latent is bit quicker in unconditional generation
+pipeline = DiffusionPipeline.from_pretrained("jiayangshi/lodochallenge_latent_diffusion").to("cuda")
+
+# unconditional generation, and save as tif or png file
+pipeline(batch_size=1).images[0].save("reconstructed_slice.png")
+```
+
+### CT Reconstruction Conditioned on Measurement
+We provide an example testing CT image [L506_000.tif](lodochallenge/L506_000.tif) and show the steps for CT reconstruction with with **18 lines of code** (DDS as example).
+```python
+import astra
+import torch
+from forward_operators_ct import Operator, NoNoise
+from pipelines import DDPMPipelineDDS
+from condition_methods import DDS
+import numpy as np
+from tifffile import imwrite, imread
+
+# ground truth image
+img = torch.tensor(imread("lodochallenge/L506_000.tif"), device='cuda').unsqueeze_(0)
+
+# specify the CT scanning geometry
+angles =np.linspace(0, np.pi, 20)
+n_rows, n_cols, n_slices = 512, 512, 1
+vol_geom = astra.create_vol_geom(n_rows, n_cols, n_slices)
+proj_geom = astra.create_proj_geom('parallel3d', 1, 1, 1, 512, angles)
+
+# create forward operator, noise operator
+A = Operator(volume_geometry=vol_geom, projection_geometry=proj_geom)
+noiser = NoNoise()
+
+# create the diffusion pipeline, pick your algorithm
+pipeline = DDPMPipelineDDS(unet=None,scheduler=None).from_pretrained("jiayangshi/lodochallenge_pixel_diffusion").to("cuda")
+pipeline.measurement_condition = DDS(operator=A, noiser=noiser)
+
+# forward pass, simulate measurement
+y_n = noiser(A(img))
+
+# CT reconstruction conditioned on measurement
+imwrite("dps_L506_000.tif", pipeline(num_inference_steps=100, measurement=y_n, cg_inner=5, cg_eps=1e-5, gamma=1, output_type=np.array).images[0])
+
 ```
 
 ## Datasets
@@ -57,16 +109,16 @@ We provide the preprocessing code to perform
 
 ## Pretrained diffusion models
 
-All pretrained models are available [here](https://drive.google.com/drive/folders/1lqbzcQWxfkc1m1MqrSAJN-lyNWsASHx0?usp=sharing).
+All pretrained models are available [here](https://drive.google.com/drive/folders/1lqbzcQWxfkc1m1MqrSAJN-lyNWsASHx0?usp=sharing) and on [HuggingFace](https://huggingface.co/jiayangshi/models).
 
-| Dataset | Type | Pretrained model |
-|---------|---------------------------| ------------- |
-| Low Dose Grand Challenge| pixel | [pixel diffusion model](https://drive.google.com/drive/folders/1IQ2ep7n9ARdq_53f7I8y1IsEaPN_Abjx?usp=drive_link) |
-| Low Dose Grand Challenge| latent | [latent diffusion model](https://drive.google.com/drive/folders/1uWzdoqol5g7vZh8j-WtqTEFN5hBywFSq?usp=drive_link) |
-| LoDoInd| pixel | [pixel diffusion model](https://drive.google.com/drive/folders/1lCBPdKIutriMYmFt3Sw54Abgb_n880Xu?usp=drive_link)  |
-| LoDoInd| latent | [latent diffusion model](https://drive.google.com/drive/folders/1A4Xlydhi9u5uMVNf7Qm4naOj_MYC4aBo?usp=drive_link) |
-| Synchrotron| pixel | [pixel diffusion model](https://drive.google.com/drive/folders/1ktJATnBpgCtttTy1wAAVO6m7MlNplaBj?usp=drive_link)  |
-| Synchrotron| latent | [latent diffusion model](https://drive.google.com/drive/folders/1OXMNoA2ty4mB7wnLucp6kMqkM_J9vW_e?usp=drive_link) |
+| Dataset | Type | Pretrained model (google drive) | HuggingFace |
+|---------|---------------------------| ------------- | ------------- |
+| Low Dose Grand Challenge| pixel | [pixel diffusion model](https://drive.google.com/drive/folders/1IQ2ep7n9ARdq_53f7I8y1IsEaPN_Abjx?usp=drive_link) | [jiayangshi/lodochallenge_pixel_diffusion](https://huggingface.co/jiayangshi/lodochallenge_pixel_diffusion) |
+| Low Dose Grand Challenge| latent | [latent diffusion model](https://drive.google.com/drive/folders/1uWzdoqol5g7vZh8j-WtqTEFN5hBywFSq?usp=drive_link) | [jiayangshi/lodochallenge_latent_diffusion](https://huggingface.co/jiayangshi/lodochallenge_latent_diffusion) |
+| LoDoInd| pixel | [pixel diffusion model](https://drive.google.com/drive/folders/1lCBPdKIutriMYmFt3Sw54Abgb_n880Xu?usp=drive_link)  | [jiayangshi/lodoind_pixel_diffusion](https://huggingface.co/jiayangshi/lodoind_pixel_diffusion) |
+| LoDoInd| latent | [latent diffusion model](https://drive.google.com/drive/folders/1A4Xlydhi9u5uMVNf7Qm4naOj_MYC4aBo?usp=drive_link) | [jiayangshi/lodoind_latent_diffusion](https://huggingface.co/jiayangshi/lodoind_latent_diffusion) |
+| Synchrotron| pixel | [pixel diffusion model](https://drive.google.com/drive/folders/1ktJATnBpgCtttTy1wAAVO6m7MlNplaBj?usp=drive_link)  | [jiayangshi/synchrotron_pixel_diffusion](https://huggingface.co/jiayangshi/synchrotron_pixel_diffusion) |
+| Synchrotron| latent | [latent diffusion model](https://drive.google.com/drive/folders/1OXMNoA2ty4mB7wnLucp6kMqkM_J9vW_e?usp=drive_link) | [jiayangshi/synchrotron_latent_diffusion](https://huggingface.co/jiayangshi/synchrotron_latent_diffusion) |
 
 
 
